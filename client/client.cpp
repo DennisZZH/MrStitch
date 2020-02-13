@@ -32,7 +32,7 @@ int main(int argc, char** argv) {
     server_address.sin_port = htons(port);
 
     if (connect(sockfd, (struct sockaddr*)&server_address, sizeof(server_address)) != 0) {
-        printf("Connection with the server failed.\n")l
+        printf("Connection with the server failed.\n");
         exit(0);
     }
 
@@ -41,4 +41,7 @@ int main(int argc, char** argv) {
 
     // Receive the panorama
     read(sockfd, buff, sizeof(buff));
+
+    // Close the socket
+    close(sockfd);
 }
