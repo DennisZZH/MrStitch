@@ -11,10 +11,10 @@
 void sendImage(int sockfd) {
     FILE *thisImage;
     int size, read_size;
-    char* buffer[10240];
+    char buffer[10240];
     char* filename = "/GrandCanyon/PIC_0042.JPG";
 
-    thisImage = fopen(filename, "rb");
+    thisImage = fopen("/GrandCanyon/PIC_0042.JPG", "rb");
     if (thisImage == NULL) {
         std::cout << "Failed to open the image: " << filename << "\n";
         exit(0);
@@ -44,7 +44,7 @@ void sendImage(int sockfd) {
 int main(int argc, char** argv) {
 
     struct sockaddr_in server_address;
-    char* buff[10240];
+    char read_buff[10240];
 
     // Create the socket
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -69,10 +69,28 @@ int main(int argc, char** argv) {
     // Send the photos
     sendImage(sockfd);
 
-    // Receive the panorama
-    read(sockfd, buff, sizeof(buff));
+    // Empty the buffer
+    bzero(read_buff, sizeof(read_buff));
+
+    // REceive the panorama size
+    int read_size = 0;
+    if ((read_size = read(sockfd, read_buff, sizeof(read_buff))) < 0) {
+
+    }
+    size_t size = atoi(read_buff);
+    bzero(read_buff, sizeof(read_buff));
+
+    // Receive the panorama image
+    if ((read_size = read(sockfd, read_buff, sizeof(read_buff))) < 0) {
+        std::cout << "Error when receiving.\n";
+        exit(0);
+    }
 
     // Store the panorama
+    FILE *outputImage;
+    outputImage = fopen("output.jpg", "w");
+    fwrite(read_buff, sizeof(char), sizeof(read_buff),outputImage);
+    fclose(outputImage);
 
     // Close the socket
     close(sockfd);
