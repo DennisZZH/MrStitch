@@ -39,6 +39,7 @@ void sendImage(int sockfd) {
         // Empty the buffer
         bzero(buffer, sizeof(buffer));
     }
+    fclose(thisImage);
 }
 
 int main(int argc, char** argv) {
@@ -54,7 +55,7 @@ int main(int argc, char** argv) {
     }
 
     char* server_ip = argv[1];
-    int port = atoi(argv[2]);
+    int port = 8080;
 
     // Assign IP and port #
     server_address.sin_family = AF_INET;
@@ -66,32 +67,39 @@ int main(int argc, char** argv) {
         exit(0);
     }
 
+    // // Select a folder
+    // std::string folderpath;
+    // std::cout << "Type the path to the folder: ";
+    // std::cin >> folderpath;
+
+
     // Send the photos
     sendImage(sockfd);
 
-    // Empty the buffer
-    bzero(read_buff, sizeof(read_buff));
+    // // Empty the buffer
+    // bzero(read_buff, sizeof(read_buff));
 
-    // REceive the panorama size
-    int read_size = 0;
-    if ((read_size = read(sockfd, read_buff, sizeof(read_buff))) < 0) {
+    // // REceive the panorama size
+    // int read_size = 0;
+    // if ((read_size = read(sockfd, read_buff, sizeof(read_buff))) < 0) {
 
-    }
-    size_t size = atoi(read_buff);
-    bzero(read_buff, sizeof(read_buff));
+    // }
+    // size_t size = atoi(read_buff);
+    // bzero(read_buff, sizeof(read_buff));
 
-    // Receive the panorama image
-    if ((read_size = read(sockfd, read_buff, sizeof(read_buff))) < 0) {
-        std::cout << "Error when receiving.\n";
-        exit(0);
-    }
+    // // Receive the panorama image
+    // if ((read_size = read(sockfd, read_buff, sizeof(read_buff))) < 0) {
+    //     std::cout << "Error when receiving.\n";
+    //     exit(0);
+    // }
 
-    // Store the panorama
-    FILE *outputImage;
-    outputImage = fopen("output.jpg", "w");
-    fwrite(read_buff, sizeof(char), sizeof(read_buff),outputImage);
-    fclose(outputImage);
+    // // Store the panorama
+    // FILE *outputImage;
+    // outputImage = fopen("output.jpg", "w");
+    // fwrite(read_buff, sizeof(char), sizeof(read_buff),outputImage);
+    // fclose(outputImage);
 
     // Close the socket
     close(sockfd);
+    return 0;
 }
