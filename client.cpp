@@ -11,7 +11,7 @@
 void sendImage(int sockfd) {
     FILE *thisImage;
     int size, read_size;
-    char* buffer[10240], verify;
+    char* buffer[10240];
     char* filename = "/GrandCanyon/PIC_0042.JPG";
 
     thisImage = fopen(filename, "rb");
@@ -26,32 +26,18 @@ void sendImage(int sockfd) {
 
     // Send image size
     write(sockfd, (void*)&size, sizeof(int));
-    
-    // Verify
-    if (read_size = read(sockfd, &verify, sizeof(char)) < 0) {
-        std::cout << "Failed to receive verification.\n";
-    }
 
-    if (verify == '1') {
-        // Send the image as byte array
-        while (!feof(thisImage)) {
-            // Read from the file
-            read_size = fread(buffer, 1, sizeof(buffer) - 1, thisImage);
+    while (!feof(thisImage)) {
+        // Read from the file
+        read_size = fread(buffer, 1, sizeof(buffer) - 1, thisImage);
 
-            // Send data through the socket
+        // Send data through the socket
+        if (read_size > 0) {
             write(sockfd, buffer, read_size);
+        }
 
-            // Wait for the verify
-            while (read(socket, &verify, sizeof(char)) < 0);
-
-            if (verify != '1') {
-                std::cout << "Failed to receive the verification for data.\n";
-            }
-            verify = ' ';
-
-            // Empty the buffer
-            bzero(buffer, sizeof(buffer));
-        }     
+        // Empty the buffer
+        bzero(buffer, sizeof(buffer));
     }
 }
 
