@@ -8,17 +8,24 @@
 #include <netdb.h> 
 
 
-void sendImage(int sockfd) {
+void sendImage(int sockfd, std::string folder, int i) {
     FILE *thisImage;
     int size, read_size;
-    char filename[] = "GrandCanyon/PIC_0042.JPG";
 
+    // Assemble the name of the file
+    int numofimg = 42 + i;
+    std::string filepath = folder + "/PIC_00" + std::to_string(numofimg) + ".JPG";
+    char filename[filepath.length() + 1];
+    strcpy(filename, filepath.c_str());
+
+    // Open the file
     thisImage = fopen(filename, "rb");
     if (thisImage == NULL) {
         std::cout << "Failed to open the image: " << filename << "\n";
         exit(0);
     }
 
+    // Get the size of the file
     fseek(thisImage, 0, SEEK_END);
     size = ftell(thisImage);
     std::cout << size << std::endl;
@@ -54,6 +61,7 @@ void sendImage(int sockfd) {
 int main(int argc, char** argv) {
 
     struct sockaddr_in server_address;
+    char buff[50];
     char read_buff[10240];
 
     // Create the socket
@@ -76,14 +84,30 @@ int main(int argc, char** argv) {
         exit(0);
     }
 
-    // // Select a folder
-    // std::string folderpath;
-    // std::cout << "Type the path to the folder: ";
-    // std::cin >> folderpath;
+    // Declare and send the job name
+    std::string jobname;
+    std::cout << "Type a name for this job: ";
+    std::cin >> jobname;
+    strcpy(buff, jobname.c_str());
+    send(sockfd, buff, sizeof(buff), 0);
+    
+    // Select a folder
+    std::string folderpath;
+    std::cout << "Type the path to the folder: ";
+    std::cin >> folderpath;
 
+    // Input the number of files
+    int filenum = 5;
+    // std::cout << "Type the number of images: ";
+    // std::cin >> filenum;
 
+    sprintf(buff, "%d", filenum);
+    send(sockfd, buff, sizeof(buff), 0);
+    
     // Send the photos
-    sendImage(sockfd);
+    for (int i = 0; i < 5; i ++) {
+        sendImage(sockfd, folderpath, i);
+    }
 
     // // Empty the buffer
     // bzero(read_buff, sizeof(read_buff));
