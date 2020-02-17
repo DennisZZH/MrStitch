@@ -1,14 +1,11 @@
 //Author: Dennis
+#include <unistd.h> 
 #include <stdio.h> 
-#include <netdb.h> 
-#include <netinet/in.h> 
-#include <stdlib.h> 
-#include <string.h> 
 #include <sys/socket.h> 
-#include <sys/types.h> 
-#define MAX 80 
+#include <stdlib.h> 
+#include <netinet/in.h> 
+#include <string.h> 
 #define PORT 8080 
-#define SA struct sockaddr 
 
 #include <cstdlib>
 #include <iostream>
@@ -16,30 +13,36 @@
 using namespace std;
 
 int recv_images_from_client(int sock){
-    int n = 0;
 
     cout<< "Reading image size" <<endl;
-    char buf[50];
     int siz = 0;
-    if ((n = recv(sock, buf, sizeof(buf), 0) <0)){
+    char buf[50];
+    if ((recv(sock, buf, sizeof(buf), 0) <0)){
         perror("recv_size()");
         exit(errno);
     }
     siz = atoi(buf);
-    cout << siz << endl; // 880 output
+    // read(sock, &siz, sizeof(int));
+    cout << "size = "<<siz << endl; // 880 output
 
-    char Rbuffer[siz];
+    char Rbuffer[1024];
     cout << "Reading image byte array" << endl;
-    n = 0;
-    if ((n = recv(sock, Rbuffer, sizeof(Rbuffer), 0)) < 0){
-        perror("recv_size()");
-        exit(errno);
+    cout << "Converting byte array to image" << endl;
+    int n = 0;
+    int acc = siz;
+
+    FILE *image;
+    image = fopen("recu.JPG", "wb");
+
+    while(acc > 0){
+        if ((n = recv(sock, Rbuffer, 1024, 0)) < 0){
+            perror("recv_size()");
+            exit(errno);
+        }
+        fwrite(Rbuffer, sizeof(char), n, image);
+        acc -= n;  
     }
 
-    cout << "Converting byte array to image" << endl;
-    FILE *image;
-    image = fopen("recu.jpg", "w");
-    fwrite(Rbuffer, sizeof(char), siz, image);
     fclose(image);
     cout << "done" << endl;
 
@@ -48,54 +51,52 @@ int recv_images_from_client(int sock){
 
 int main(int argc, char const *argv[]) 
 { 
-  int sockfd, connfd, len; 
-    struct sockaddr_in servaddr, cli; 
-  
-    // socket create and verification 
-    sockfd = socket(AF_INET, SOCK_STREAM, 0); 
-    if (sockfd == -1) { 
-        printf("socket creation failed...\n"); 
-        exit(0); 
+  int server_fd, new_socket, valread; 
+    struct sockaddr_in address; 
+    int opt = 1; 
+    int addrlen = sizeof(address); 
+       
+    // Creating socket file descriptor 
+    if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) 
+    { 
+        perror("socket failed"); 
+        exit(EXIT_FAILURE); 
     } 
-    else
-        printf("Socket successfully created..\n"); 
-    bzero(&servaddr, sizeof(servaddr)); 
-  
-    // assign IP, PORT 
-    servaddr.sin_family = AF_INET; 
-    servaddr.sin_addr.s_addr = htonl(INADDR_ANY); 
-    servaddr.sin_port = htons(PORT); 
-  
-    // Binding newly created socket to given IP and verification 
-    if ((bind(sockfd, (SA*)&servaddr, sizeof(servaddr))) != 0) { 
-        printf("socket bind failed...\n"); 
-        exit(0); 
+       
+    // // Forcefully attaching socket to the port 8080 
+    // if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, 
+    //                                               &opt, sizeof(opt))) 
+    // { 
+    //     perror("setsockopt"); 
+    //     exit(EXIT_FAILURE); 
+    // } 
+    address.sin_family = AF_INET; 
+    address.sin_addr.s_addr = INADDR_ANY; 
+    address.sin_port = htons( PORT ); 
+       
+    // Forcefully attaching socket to the port 8080 
+    if (bind(server_fd, (struct sockaddr *)&address,  
+                                 sizeof(address))<0) 
+    { 
+        perror("bind failed"); 
+        exit(EXIT_FAILURE); 
     } 
-    else
-        printf("Socket successfully binded..\n"); 
-  
-    // Now server is ready to listen and verification 
-    if ((listen(sockfd, 5)) != 0) { 
-        printf("Listen failed...\n"); 
-        exit(0); 
+    if (listen(server_fd, 3) < 0) 
+    { 
+        perror("listen"); 
+        exit(EXIT_FAILURE); 
     } 
-    else
-        printf("Server listening..\n"); 
-    len = sizeof(cli); 
-  
-    // Accept the data packet from client and verification 
-    connfd = accept(sockfd, (SA*)&cli, &len); 
-    if (connfd < 0) { 
-        printf("server acccept failed...\n"); 
-        exit(0); 
+    if ((new_socket = accept(server_fd, (struct sockaddr *)&address,  
+                       (socklen_t*)&addrlen))<0) 
+    { 
+        perror("accept"); 
+        exit(EXIT_FAILURE); 
     } 
-    else
-        printf("server acccept the client...\n"); 
   
     // Function for chatting between client and server 
-    recv_images_from_client(connfd); 
+    recv_images_from_client(new_socket); 
   
     // After chatting close the socket 
-    close(sockfd); 
+    close(server_fd); 
     return 0; 
 } 
