@@ -11,10 +11,9 @@
 void sendImage(int sockfd) {
     FILE *thisImage;
     int size, read_size;
-    char buffer[10240];
-    char* filename = "/GrandCanyon/PIC_0042.JPG";
+    char filename[] = "GrandCanyon/PIC_0042.JPG";
 
-    thisImage = fopen("/GrandCanyon/PIC_0042.JPG", "rb");
+    thisImage = fopen(filename, "rb");
     if (thisImage == NULL) {
         std::cout << "Failed to open the image: " << filename << "\n";
         exit(0);
@@ -22,18 +21,28 @@ void sendImage(int sockfd) {
 
     fseek(thisImage, 0, SEEK_END);
     size = ftell(thisImage);
+    std::cout << size << std::endl;
     fseek(thisImage, 0, SEEK_SET);
+    
+    // Copy the value to buff
+    char buff[50];
+    sprintf(buff, "%d", size);
 
     // Send image size
-    write(sockfd, (void*)&size, sizeof(int));
+    send(sockfd, buff, sizeof(buff), 0);
+
+    char buffer[1024];
 
     while (!feof(thisImage)) {
         // Read from the file
-        read_size = fread(buffer, 1, sizeof(buffer) - 1, thisImage);
-
+        read_size = fread(buffer, 1, sizeof(buffer), thisImage);
+        std::cout << read_size << "\n";
         // Send data through the socket
         if (read_size > 0) {
-            write(sockfd, buffer, read_size);
+            if (send(sockfd, buffer, read_size, 0) < 0) {
+                std::cout << "Failed to send the data.\n";
+                exit(0);
+            }
         }
 
         // Empty the buffer
