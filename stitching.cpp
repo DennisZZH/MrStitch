@@ -11,7 +11,7 @@
 #include "opencv2/stitching.hpp" 
   
 using namespace std; 
-using namespace cv; 
+using namespace cv;
   
 // Define mode for stitching as panoroma  
 // (One out of many functions of Stitcher) 
