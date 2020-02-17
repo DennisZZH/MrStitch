@@ -11,10 +11,9 @@
 void sendImage(int sockfd) {
     FILE *thisImage;
     int size, read_size;
-    char buffer[10240];
-    char* filename = "/GrandCanyon/PIC_0042.JPG";
+    char filename[] = "GrandCanyon/PIC_0042.JPG";
 
-    thisImage = fopen("/GrandCanyon/PIC_0042.JPG", "rb");
+    thisImage = fopen(filename, "rb");
     if (thisImage == NULL) {
         std::cout << "Failed to open the image: " << filename << "\n";
         exit(0);
@@ -22,23 +21,34 @@ void sendImage(int sockfd) {
 
     fseek(thisImage, 0, SEEK_END);
     size = ftell(thisImage);
+    std::cout << size << std::endl;
     fseek(thisImage, 0, SEEK_SET);
+    
+    // Copy the value to buff
+    char buff[50];
+    sprintf(buff, "%d", size);
 
     // Send image size
-    write(sockfd, (void*)&size, sizeof(int));
+    send(sockfd, buff, sizeof(buff), 0);
+
+    char buffer[1024];
 
     while (!feof(thisImage)) {
         // Read from the file
-        read_size = fread(buffer, 1, sizeof(buffer) - 1, thisImage);
-
+        read_size = fread(buffer, 1, sizeof(buffer), thisImage);
+        std::cout << read_size << "\n";
         // Send data through the socket
         if (read_size > 0) {
-            write(sockfd, buffer, read_size);
+            if (send(sockfd, buffer, read_size, 0) < 0) {
+                std::cout << "Failed to send the data.\n";
+                exit(0);
+            }
         }
 
         // Empty the buffer
         bzero(buffer, sizeof(buffer));
     }
+    fclose(thisImage);
 }
 
 int main(int argc, char** argv) {
@@ -54,7 +64,7 @@ int main(int argc, char** argv) {
     }
 
     char* server_ip = argv[1];
-    int port = atoi(argv[2]);
+    int port = 8080;
 
     // Assign IP and port #
     server_address.sin_family = AF_INET;
@@ -66,32 +76,39 @@ int main(int argc, char** argv) {
         exit(0);
     }
 
+    // // Select a folder
+    // std::string folderpath;
+    // std::cout << "Type the path to the folder: ";
+    // std::cin >> folderpath;
+
+
     // Send the photos
     sendImage(sockfd);
 
-    // Empty the buffer
-    bzero(read_buff, sizeof(read_buff));
+    // // Empty the buffer
+    // bzero(read_buff, sizeof(read_buff));
 
-    // REceive the panorama size
-    int read_size = 0;
-    if ((read_size = read(sockfd, read_buff, sizeof(read_buff))) < 0) {
+    // // REceive the panorama size
+    // int read_size = 0;
+    // if ((read_size = read(sockfd, read_buff, sizeof(read_buff))) < 0) {
 
-    }
-    size_t size = atoi(read_buff);
-    bzero(read_buff, sizeof(read_buff));
+    // }
+    // size_t size = atoi(read_buff);
+    // bzero(read_buff, sizeof(read_buff));
 
-    // Receive the panorama image
-    if ((read_size = read(sockfd, read_buff, sizeof(read_buff))) < 0) {
-        std::cout << "Error when receiving.\n";
-        exit(0);
-    }
+    // // Receive the panorama image
+    // if ((read_size = read(sockfd, read_buff, sizeof(read_buff))) < 0) {
+    //     std::cout << "Error when receiving.\n";
+    //     exit(0);
+    // }
 
-    // Store the panorama
-    FILE *outputImage;
-    outputImage = fopen("output.jpg", "w");
-    fwrite(read_buff, sizeof(char), sizeof(read_buff),outputImage);
-    fclose(outputImage);
+    // // Store the panorama
+    // FILE *outputImage;
+    // outputImage = fopen("output.jpg", "w");
+    // fwrite(read_buff, sizeof(char), sizeof(read_buff),outputImage);
+    // fclose(outputImage);
 
     // Close the socket
     close(sockfd);
+    return 0;
 }
