@@ -19,20 +19,21 @@ Stitcher::Mode mode = Stitcher::PANORAMA;
   
 // Array for pictures 
 vector<Mat> imgs; 
-  
-int main(int argc, char* argv[]) 
-{ 
+
+int stitch_imgs(char* filename, int num){
     // Get all the images that need to be  
-    // stitched as arguments from command line  
-    for (int i = 1; i < argc; ++i) 
-    { 
+    // stitched as arguments from command line
+    string imgname;
+    for (int i = 1; i < num; ++i) 
+    {       
+            imgname = string(filename) + to_string(num);
             // Read the ith argument or image  
             // and push into the image array 
-            Mat img = imread(argv[i]); 
+            Mat img = imread(imgname); 
             if (img.empty()) 
             { 
                 // Exit if image is not present 
-                cout << "Can't read image '" << argv[i] << "'\n"; 
+                cout << "Can't read image '" << imgname << "'\n"; 
                 return -1; 
             } 
             imgs.push_back(img); 
@@ -63,5 +64,5 @@ int main(int argc, char* argv[])
     imshow("Result", pano); 
       
     waitKey(0); 
-    return 0; 
-} 
+    return 0;
+}
