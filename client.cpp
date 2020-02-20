@@ -7,15 +7,18 @@
 #include <arpa/inet.h>
 #include <string.h>
 #include <netdb.h> 
+#include <errno.h>
 
 
 void sendImage(int sockfd, std::string folder, int i) {
     FILE *thisImage;
     int size, read_size;
 
-    // Assemble the name of the file
+    // Assemble the file path of the file
     int numofimg = 42 + i;
     std::string filepath = folder + "/PIC_00" + std::to_string(numofimg) + ".JPG";
+
+    // Copy the path to a c_string
     char filename[filepath.length() + 1];
     strcpy(filename, filepath.c_str());
 
@@ -73,7 +76,8 @@ int main(int argc, char** argv) {
     }
 
     char* server_ip = argv[1];
-    int port = 8080;
+    std::cout << server_ip << std::endl;
+    int port = 10000;
 
     // Assign IP and port #
     server_address.sin_family = AF_INET;
@@ -81,6 +85,8 @@ int main(int argc, char** argv) {
     server_address.sin_port = htons(port);
 
     if (connect(sockfd, (struct sockaddr*)&server_address, sizeof(server_address)) != 0) {
+        printf("Error number: %d\n", errno);
+        printf("The error message is %s\n", strerror(errno));
         printf("Connection with the server failed.\n");
         exit(0);
     }
@@ -98,7 +104,7 @@ int main(int argc, char** argv) {
     std::cin >> folderpath;
 
     // Input the number of files
-    int filenum = 5;
+    int filenum = 2;
     // std::cout << "Type the number of images: ";
     // std::cin >> filenum;
 
@@ -106,7 +112,7 @@ int main(int argc, char** argv) {
     send(sockfd, buff, sizeof(buff), 0);
     
     // Send the photos
-    for (int i = 0; i < 5; i ++) {
+    for (int i = 0; i < filenum; i ++) {
         sendImage(sockfd, folderpath, i);
     }
 
@@ -129,7 +135,7 @@ int main(int argc, char** argv) {
 
     // // Store the panorama
     // FILE *outputImage;
-    // outputImage = fopen("output.jpg", "w");
+    // outputImage = fopen("output.jpg", "wb");
     // fwrite(read_buff, sizeof(char), sizeof(read_buff),outputImage);
     // fclose(outputImage);
 
