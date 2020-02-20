@@ -77,7 +77,7 @@ int main(int argc, char** argv) {
 
     char* server_ip = argv[1];
     std::cout << server_ip << std::endl;
-    int port = 10000;
+    int port = 8080;
 
     // Assign IP and port #
     server_address.sin_family = AF_INET;
@@ -104,9 +104,9 @@ int main(int argc, char** argv) {
     std::cin >> folderpath;
 
     // Input the number of files
-    int filenum = 2;
-    // std::cout << "Type the number of images: ";
-    // std::cin >> filenum;
+    int filenum = 0;
+    std::cout << "Type the number of images: ";
+    std::cin >> filenum;
 
     sprintf(buff, "%d", filenum);
     send(sockfd, buff, sizeof(buff), 0);
