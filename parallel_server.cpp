@@ -58,6 +58,7 @@ int recv_imgs_from_client(int sock, int num){
 int send_imgs_to_client(int sock){
     FILE *thisImage;
     int size, read_size;
+    char ACK[2];
 
     std::string ext = ".jpg";
     std::string filename = std::string(jobname) + "_result" + ext;
@@ -98,6 +99,13 @@ int send_imgs_to_client(int sock){
         acc+=read_size;
         // Empty the buffer
         bzero(buffer, sizeof(buffer));
+        // Wait for ACK
+        if((recv(sock, ACK, 2, 0)) < 0){
+            perror("Fail to receive ACK!\n");
+            exit(errno);
+        }else{
+            printf("Receive ACK for result\n");
+        }
     }
     printf("send size = %d\n", acc);
     fclose(thisImage);
@@ -227,7 +235,7 @@ int main(int argc, char const *argv[])
 
     stitch_imgs(num, jobname);
     std::cout<<"finish stitching!"<<std::endl;
-    
+
     send_imgs_to_client(main_socket);
     std::cout<<"finish sending back result!"<<std::endl;
 
