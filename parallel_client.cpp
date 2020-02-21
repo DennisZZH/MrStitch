@@ -167,14 +167,9 @@ int main(int argc, char** argv) {
         }
     }
 
-    for (int i = 0; i < filenum; i++)
-    {
+    for (int i = 0; i < filenum; i++) {
         pthread_join(tid[i], NULL);
     }
-    
-
-    // Empty the buffer
-    bzero(read_buff, sizeof(read_buff));
 
     // Receive the panorama size
     int read_size = 0;
@@ -195,20 +190,24 @@ int main(int argc, char** argv) {
     FILE *outputImage;
     outputImage = fopen(resultname, "wb");
 
+    ack[0] = '1';
+    int buff_size = 0;
     // Receive the panorama image and store it
     while (size > 0) {
         if ((read_size = recv(sockfd, read_buff, sizeof(read_buff), 0)) <= 0) {
             std::cout << "Failed to read the data.\n";
             exit(0);
         }
+        buff_size += read_size;
+        send(sockfd, ack, sizeof(ack), 0);
+        
         std::cout << "Received " << read_size << "\n";
         fwrite(read_buff, sizeof(char), read_size, outputImage);
         size = size - read_size;
-        std::cout << "Left: " << size << "\n";
+        // std::cout << "Left: " << size << "\n";
         bzero(read_buff, sizeof(read_buff));
     }
     // Send ACK back to the server
-    ack[0] = '1';
     send(sockfd, ack, sizeof(ack), 0);
     
     fclose(outputImage);
