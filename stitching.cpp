@@ -10,7 +10,6 @@
 #include "opencv2/highgui.hpp" 
 #include "opencv2/stitching.hpp" 
   
-using namespace std; 
 using namespace cv;
   
 // Define mode for stitching as panoroma  
@@ -18,22 +17,23 @@ using namespace cv;
 Stitcher::Mode mode = Stitcher::PANORAMA; 
   
 // Array for pictures 
-vector<Mat> imgs; 
+std::vector<Mat> imgs; 
 
 int stitch_imgs(char* filename, int num){
     // Get all the images that need to be  
     // stitched as arguments from command line
-    string imgname;
-    for (int i = 1; i < num; ++i) 
+    std::string imgname;
+    std::string ext = ".jpg";
+    for (int i = 0; i < num; ++i) 
     {       
-            imgname = string(filename) + to_string(num);
+            imgname = std::string(filename) + std::to_string(i) + ext;
             // Read the ith argument or image  
             // and push into the image array 
             Mat img = imread(imgname); 
             if (img.empty()) 
             { 
                 // Exit if image is not present 
-                cout << "Can't read image '" << imgname << "'\n"; 
+                std::cout << "Can't read image '" << imgname << "'\n"; 
                 return -1; 
             } 
             imgs.push_back(img); 
@@ -52,13 +52,13 @@ int stitch_imgs(char* filename, int num){
     { 
         // Check if images could not be stiched 
         // status is OK if images are stiched successfully 
-        cout << "Can't stitch images\n"; 
+        std::cout << "Can't stitch images\n"; 
         return -1; 
     } 
       
     // Store a new image stiched from the given  
     //set of images as "result.jpg" 
-    imwrite("result.jpg", pano); 
+    imwrite(std::string(filename) + "_result" + ext, pano); 
       
     // Show the result 
     imshow("Result", pano); 
