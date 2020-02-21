@@ -9,6 +9,9 @@
 #include <netdb.h> 
 #include <errno.h>
 
+char* server_ip = "169.231.164.67";
+int port = 8222;
+std::string folder = "GrandCanyon";
 
 void sendImage(int sockfd, std::string folder, int i) {
     FILE *thisImage;
@@ -42,24 +45,64 @@ void sendImage(int sockfd, std::string folder, int i) {
     // Send image size
     send(sockfd, buff, sizeof(buff), 0);
 
-    char buffer[1024];
+    char Sbuffer[1024];
 
     while (!feof(thisImage)) {
         // Read from the file
-        read_size = fread(buffer, 1, sizeof(buffer), thisImage);
+        read_size = fread(Sbuffer, 1, sizeof(Sbuffer), thisImage);
         // std::cout << read_size << "\n";
         // Send data through the socket
         if (read_size > 0) {
-            if (send(sockfd, buffer, read_size, 0) < 0) {
+            if (send(sockfd, Sbuffer, read_size, 0) < 0) {
                 std::cout << "Failed to send the data.\n";
                 exit(0);
             }
         }
 
         // Empty the buffer
-        bzero(buffer, sizeof(buffer));
+        bzero(Sbuffer, sizeof(Sbuffer));
     }
     fclose(thisImage);
+}
+
+void *clientThread(void* arg) {
+    struct sockaddr_in server_address;
+    char ack[2];
+    int i = *(int *)arg;
+
+    // Create the local socket
+    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd == -1) {
+        printf("Local socket creation failed.\n");
+        exit(0);
+    }
+
+    // Assign IP and port #
+    server_address.sin_family = AF_INET;
+    server_address.sin_addr.s_addr = inet_addr(server_ip);
+    server_address.sin_port = htons(port + i + 1);
+    std::cout << "Port #: " << port + i + 1 << std::endl;
+
+    if (connect(sockfd, (struct sockaddr*)&server_address, sizeof(server_address)) != 0) {
+        printf("Error number: %d\n", errno);
+        printf("The error message is %s\n", strerror(errno));
+        printf("Local socket connection with the server failed.\n");
+        exit(0);
+    }
+
+    // Send the picture
+    sendImage(sockfd, folder, i);
+    
+    // Check the ack
+    recv(sockfd, ack, sizeof(ack), 0);
+    if (ack[0] == '1') {
+        std::cout << "The server received " << i << " image.\n Closing the socket.\n";
+        close(sockfd);
+    }
+    else {
+        std::cout << "The server does not finish receiving " << i << " image.\n";
+    }
+    return NULL;
 }
 
 int main(int argc, char** argv) {
@@ -69,16 +112,14 @@ int main(int argc, char** argv) {
     char read_buff[1024];
     char ack[2];
 
-    // Create the socket
+    // Create the main socket
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd == -1) {
-        printf("Socket creation failed.\n");
+        printf("Main socket creation failed.\n");
         exit(0);
     }
 
-    char* server_ip = argv[1];
-    std::cout << server_ip << std::endl;
-    int port = 8081;
+    std::cout << "You are connecting to " << server_ip << std::endl;
 
     // Assign IP and port #
     server_address.sin_family = AF_INET;
@@ -88,7 +129,7 @@ int main(int argc, char** argv) {
     if (connect(sockfd, (struct sockaddr*)&server_address, sizeof(server_address)) != 0) {
         printf("Error number: %d\n", errno);
         printf("The error message is %s\n", strerror(errno));
-        printf("Connection with the server failed.\n");
+        printf("Main socket connection with the server failed.\n");
         exit(0);
     }
 
@@ -100,12 +141,12 @@ int main(int argc, char** argv) {
     send(sockfd, buff, sizeof(buff), 0);
     
     // Select a folder
-    std::string folderpath = "GrandCanyon";
+    // std::string folderpath = "GrandCanyon";
     // std::cout << "Type the path to the folder: ";
     // std::cin >> folderpath;
 
     // Input the number of files
-    int filenum = 12;
+    int filenum = 2;
     // std::cout << "Type the number of images: ";
     // std::cin >> filenum;
 
@@ -114,17 +155,23 @@ int main(int argc, char** argv) {
     bzero(buff, sizeof(buff));
     
     // Send the photos
-    for (int i = 0; i < filenum; i ++) {
-        sendImage(sockfd, folderpath, i);
-        recv(sockfd, ack, sizeof(ack), 0);
-        if (ack[0] == '1') {
-            continue;
+    int sequence[filenum];
+    pthread_t tid[filenum];
+    for (int i = 0; i < filenum; i++) {
+        sequence[i] = i;
+        if (recv(sockfd, ack, sizeof(ack), 0)) {
+            if ((pthread_create(&tid[i], NULL, clientThread, (void*)(sequence + i)) < 0)) {
+                std::cout << "Failed to create the " << i << " thread\n";
+                exit(0);
+            }
         }
-        else {
-            std::cout << "The server does not receive this image.\n";
-        }
-        bzero(buff, sizeof(buff));
     }
+
+    for (int i = 0; i < filenum; i++)
+    {
+        pthread_join(tid[i], NULL);
+    }
+    
 
     // Empty the buffer
     bzero(read_buff, sizeof(read_buff));
@@ -154,9 +201,10 @@ int main(int argc, char** argv) {
             std::cout << "Failed to read the data.\n";
             exit(0);
         }
-        // std::cout << "Received " << read_size << "\n";
+        std::cout << "Received " << read_size << "\n";
         fwrite(read_buff, sizeof(char), read_size, outputImage);
         size = size - read_size;
+        std::cout << "Left: " << size << "\n";
         bzero(read_buff, sizeof(read_buff));
     }
     // Send ACK back to the server
