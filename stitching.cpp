@@ -19,14 +19,14 @@ Stitcher::Mode mode = Stitcher::PANORAMA;
 // Array for pictures 
 std::vector<Mat> imgs; 
 
-int stitch_imgs(char* filename, int num){
+int stitch_imgs(int num, char* jobname){
     // Get all the images that need to be  
     // stitched as arguments from command line
     std::string imgname;
     std::string ext = ".jpg";
     for (int i = 0; i < num; ++i) 
     {       
-            imgname = std::string(filename) + std::to_string(i) + ext;
+            imgname = std::string(jobname) + std::to_string(i) + ext;
             // Read the ith argument or image  
             // and push into the image array 
             Mat img = imread(imgname); 
@@ -58,7 +58,7 @@ int stitch_imgs(char* filename, int num){
       
     // Store a new image stiched from the given  
     //set of images as "result.jpg" 
-    imwrite(std::string(filename) + "_result" + ext, pano); 
+    imwrite(std::string(jobname) + "_result" + ext, pano); 
       
     // Show the result 
     imshow("Result", pano); 
