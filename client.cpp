@@ -32,7 +32,7 @@ void sendImage(int sockfd, std::string folder, int i) {
     // Get the size of the file
     fseek(thisImage, 0, SEEK_END);
     size = ftell(thisImage);
-    std::cout << size << std::endl;
+    std::cout << "The sending size is " << size << std::endl;
     fseek(thisImage, 0, SEEK_SET);
     
     // Copy the value to buff
@@ -47,7 +47,7 @@ void sendImage(int sockfd, std::string folder, int i) {
     while (!feof(thisImage)) {
         // Read from the file
         read_size = fread(buffer, 1, sizeof(buffer), thisImage);
-        std::cout << read_size << "\n";
+        // std::cout << read_size << "\n";
         // Send data through the socket
         if (read_size > 0) {
             if (send(sockfd, buffer, read_size, 0) < 0) {
@@ -66,7 +66,8 @@ int main(int argc, char** argv) {
 
     struct sockaddr_in server_address;
     char buff[50];
-    char read_buff[10240];
+    char read_buff[1024];
+    char ack[2];
 
     // Create the socket
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -77,7 +78,7 @@ int main(int argc, char** argv) {
 
     char* server_ip = argv[1];
     std::cout << server_ip << std::endl;
-    int port = 8080;
+    int port = 8081;
 
     // Assign IP and port #
     server_address.sin_family = AF_INET;
@@ -92,52 +93,77 @@ int main(int argc, char** argv) {
     }
 
     // Declare and send the job name
-    std::string jobname;
-    std::cout << "Type a name for this job: ";
-    std::cin >> jobname;
+    std::string jobname = "GrandCanyon";
+    // std::cout << "Type a name for this job: ";
+    // std::cin >> jobname;
     strcpy(buff, jobname.c_str());
     send(sockfd, buff, sizeof(buff), 0);
     
     // Select a folder
-    std::string folderpath;
-    std::cout << "Type the path to the folder: ";
-    std::cin >> folderpath;
+    std::string folderpath = "GrandCanyon";
+    // std::cout << "Type the path to the folder: ";
+    // std::cin >> folderpath;
 
     // Input the number of files
-    int filenum = 0;
-    std::cout << "Type the number of images: ";
-    std::cin >> filenum;
+    int filenum = 12;
+    // std::cout << "Type the number of images: ";
+    // std::cin >> filenum;
 
     sprintf(buff, "%d", filenum);
     send(sockfd, buff, sizeof(buff), 0);
+    bzero(buff, sizeof(buff));
     
     // Send the photos
     for (int i = 0; i < filenum; i ++) {
         sendImage(sockfd, folderpath, i);
+        recv(sockfd, ack, sizeof(ack), 0);
+        if (ack[0] == '1') {
+            continue;
+        }
+        else {
+            std::cout << "The server does not receive this image.\n";
+        }
+        bzero(buff, sizeof(buff));
     }
 
-    // // Empty the buffer
-    // bzero(read_buff, sizeof(read_buff));
+    // Empty the buffer
+    bzero(read_buff, sizeof(read_buff));
 
-    // // REceive the panorama size
-    // int read_size = 0;
-    // if ((read_size = read(sockfd, read_buff, sizeof(read_buff))) < 0) {
+    // Receive the panorama size
+    int read_size = 0;
+    if ((read_size = recv(sockfd, read_buff, sizeof(read_buff), 0)) < 0) {
+        std::cout << "Failed to read the size.\n";
+        exit(0);
+    }
+    size_t size = atoi(read_buff);
+    std::cout << "The receiving size is " << size << "\n";
+    bzero(read_buff, sizeof(read_buff));
 
-    // }
-    // size_t size = atoi(read_buff);
-    // bzero(read_buff, sizeof(read_buff));
+    // Create the result file name
+    std::string resultfile = jobname + ".jpg";
+    char resultname[resultfile.length() + 1];
+    strcpy(resultname, resultfile.c_str());
 
-    // // Receive the panorama image
-    // if ((read_size = read(sockfd, read_buff, sizeof(read_buff))) < 0) {
-    //     std::cout << "Error when receiving.\n";
-    //     exit(0);
-    // }
+    // Open a file for the resualt
+    FILE *outputImage;
+    outputImage = fopen(resultname, "wb");
 
-    // // Store the panorama
-    // FILE *outputImage;
-    // outputImage = fopen("output.jpg", "wb");
-    // fwrite(read_buff, sizeof(char), sizeof(read_buff),outputImage);
-    // fclose(outputImage);
+    // Receive the panorama image and store it
+    while (size > 0) {
+        if ((read_size = recv(sockfd, read_buff, sizeof(read_buff), 0)) <= 0) {
+            std::cout << "Failed to read the data.\n";
+            exit(0);
+        }
+        // std::cout << "Received " << read_size << "\n";
+        fwrite(read_buff, sizeof(char), read_size, outputImage);
+        size = size - read_size;
+        bzero(read_buff, sizeof(read_buff));
+    }
+    // Send ACK back to the server
+    ack[0] = '1';
+    send(sockfd, ack, sizeof(ack), 0);
+    
+    fclose(outputImage);
 
     // Close the socket
     close(sockfd);
