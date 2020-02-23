@@ -9,9 +9,18 @@
 #include <netdb.h> 
 #include <errno.h>
 
-char* server_ip = "169.231.164.67";
+char* server_ip = "169.231.175.88";
 int port = 8222;
 std::string folder = "GrandCanyon";
+bool divide = true;
+
+struct triple
+{
+    int startNum;
+    int num;
+    int numOfThread;
+};
+
 
 void sendImage(int sockfd, std::string folder, int i) {
     FILE *thisImage;
@@ -68,7 +77,9 @@ void sendImage(int sockfd, std::string folder, int i) {
 void *clientThread(void* arg) {
     struct sockaddr_in server_address;
     char ack[2];
-    int i = *(int *)arg;
+    triple args = *(triple *)arg;
+
+    std::cout << "startNum: " << args.startNum << "\nnum: " << args.num << "\nnumOfThread: " << args.numOfThread << "\n";
 
     // Create the local socket
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -80,8 +91,8 @@ void *clientThread(void* arg) {
     // Assign IP and port #
     server_address.sin_family = AF_INET;
     server_address.sin_addr.s_addr = inet_addr(server_ip);
-    server_address.sin_port = htons(port + i + 1);
-    std::cout << "Port #: " << port + i + 1 << std::endl;
+    server_address.sin_port = htons(port + args.numOfThread + 1);
+    std::cout << args.numOfThread << ") Port #: " << port + args.numOfThread + 1 << "\n";
 
     if (connect(sockfd, (struct sockaddr*)&server_address, sizeof(server_address)) != 0) {
         printf("Error number: %d\n", errno);
@@ -89,19 +100,21 @@ void *clientThread(void* arg) {
         printf("Local socket connection with the server failed.\n");
         exit(0);
     }
+    std::cout << "Socket " << args.numOfThread << " connected!\n";
 
     // Send the picture
-    sendImage(sockfd, folder, i);
+    for (int j = args.startNum; j < args.num + args.startNum; j++) {
+        std::cout << args.numOfThread << ") Sending the " << j << " image\n";
+        sendImage(sockfd, folder, j);
+
+        // Check the ack
+        if (recv(sockfd, ack, sizeof(ack), 0)) {
+            continue;
+        }
+    }
     
-    // Check the ack
-    recv(sockfd, ack, sizeof(ack), 0);
-    if (ack[0] == '1') {
-        std::cout << "The server received " << i << " image.\n Closing the socket.\n";
-        close(sockfd);
-    }
-    else {
-        std::cout << "The server does not finish receiving " << i << " image.\n";
-    }
+    // Close the socket and return
+    close(sockfd);
     return NULL;
 }
 
@@ -146,21 +159,52 @@ int main(int argc, char** argv) {
     // std::cin >> folderpath;
 
     // Input the number of files
-    int filenum = 2;
+    int filenum = 9;
     // std::cout << "Type the number of images: ";
     // std::cin >> filenum;
+    
+    // Assign the number of files for each thread
+    int numOfImages = filenum / 3;
+    if (filenum % 3 != 0) {
+        divide = false;
+    }
+    int num[3];
+    if (!divide) {
+        num[0] = numOfImages + 1;
+        num[1] = numOfImages;
+        num[2] = filenum - 2 * numOfImages - 1;
+    }
+    else {
+        num[0] = numOfImages;
+        num[1] = numOfImages;
+        num[2] = numOfImages;
+    }
 
-    sprintf(buff, "%d", filenum);
+    // Send the numbers
+    bzero(buff, sizeof(buff));
+    std::string snum = "0;" + std::to_string(num[0]) + ";" + std::to_string(num[1] + num[0]) + ";" + std::to_string(filenum);
+    strcpy(buff, snum.c_str());
     send(sockfd, buff, sizeof(buff), 0);
     bzero(buff, sizeof(buff));
-    
+
+    // Assemble the arg
+    triple args[3];
+    for (int i = 0; i < 3; i++) {
+        args[i].numOfThread = i;
+        args[i].num = num[i];
+        if (i == 0) {
+            args[i].startNum = 0;
+        }
+        else {
+            args[i].startNum = args[i-1].startNum + args[i-1].num;
+        }
+    }
+
     // Send the photos
-    int sequence[filenum];
-    pthread_t tid[filenum];
-    for (int i = 0; i < filenum; i++) {
-        sequence[i] = i;
+    pthread_t tid[3];
+    for (int i = 0; i < 3; i++) {
         if (recv(sockfd, ack, sizeof(ack), 0)) {
-            if ((pthread_create(&tid[i], NULL, clientThread, (void*)(sequence + i)) < 0)) {
+            if ((pthread_create(&tid[i], NULL, clientThread, (void*)(args + i)) < 0)) {
                 std::cout << "Failed to create the " << i << " thread\n";
                 exit(0);
             }
