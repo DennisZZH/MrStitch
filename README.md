@@ -6,6 +6,10 @@ Network based Panorama project for CS176B
 
 ### Install OpenCV library
 
+If you are using Mac, plase check out the detail on this page about how to install opencv
+
+[1]: https://medium.com/@jaskaranvirdi/setting-up-opencv-and-c-development-environment-in-xcode-b6027728003
+
 ### Compile client and server
 
 To compile sequantial server: 
