@@ -8,7 +8,9 @@
 #include <string.h>
 #include <netdb.h> 
 #include <errno.h>
+#include <sys/time.h>
 
+char* server_ip = "169.231.175.88";
 
 void sendImage(int sockfd, std::string folder, int i) {
     FILE *thisImage;
@@ -63,7 +65,8 @@ void sendImage(int sockfd, std::string folder, int i) {
 }
 
 int main(int argc, char** argv) {
-
+    timeval start, end;
+    gettimeofday(&start, NULL);
     struct sockaddr_in server_address;
     char buff[50];
     char read_buff[1024];
@@ -76,9 +79,8 @@ int main(int argc, char** argv) {
         exit(0);
     }
 
-    char* server_ip = argv[1];
     std::cout << server_ip << std::endl;
-    int port = 8081;
+    int port = 8000;
 
     // Assign IP and port #
     server_address.sin_family = AF_INET;
@@ -105,7 +107,7 @@ int main(int argc, char** argv) {
     // std::cin >> folderpath;
 
     // Input the number of files
-    int filenum = 12;
+    int filenum = 32;
     // std::cout << "Type the number of images: ";
     // std::cin >> filenum;
 
@@ -148,24 +150,31 @@ int main(int argc, char** argv) {
     FILE *outputImage;
     outputImage = fopen(resultname, "wb");
 
+
+    ack[0] = '1';
     // Receive the panorama image and store it
     while (size > 0) {
         if ((read_size = recv(sockfd, read_buff, sizeof(read_buff), 0)) <= 0) {
             std::cout << "Failed to read the data.\n";
             exit(0);
         }
+        send(sockfd, ack, sizeof(ack), 0);
+
         // std::cout << "Received " << read_size << "\n";
         fwrite(read_buff, sizeof(char), read_size, outputImage);
         size = size - read_size;
         bzero(read_buff, sizeof(read_buff));
     }
-    // Send ACK back to the server
-    ack[0] = '1';
+
     send(sockfd, ack, sizeof(ack), 0);
     
     fclose(outputImage);
 
     // Close the socket
     close(sockfd);
+    gettimeofday(&end, NULL);
+    long seconds = (end.tv_sec - start.tv_sec);
+    long micro = ((seconds * 1000000) + end.tv_usec) - (start.tv_usec);
+    std::cout << "The program is done.\n The time used is " << seconds <<"s and " << micro << " microseconds.\n";
     return 0;
 }

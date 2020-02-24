@@ -6,11 +6,12 @@
 #include <stdlib.h> 
 #include <netinet/in.h> 
 #include <string.h> 
-#define PORT 8081 
+#define PORT 8000
 
 #include <cstdlib>
 #include <iostream>
 #include "stitching.cpp"
+#include <sys/time.h>	// for gettimeofday()
 
 int recv_imgs_from_client(int sock, char* jobname, int num){
 
@@ -22,7 +23,7 @@ int recv_imgs_from_client(int sock, char* jobname, int num){
         exit(errno);
     }
     siz = atoi(buf);
-   printf("size = %d", siz);
+   printf("image%d size = %d", num, siz);
 
     char Rbuffer[1024];
     printf("Reading image byte array!\n");
@@ -42,7 +43,7 @@ int recv_imgs_from_client(int sock, char* jobname, int num){
         }
         fwrite(Rbuffer, sizeof(char), n, image);
         acc -= n;
-        printf("buffer size = %d\n", n); 
+        //printf("buffer size = %d\n", n); 
     }
 
     fclose(image);
@@ -54,6 +55,7 @@ int recv_imgs_from_client(int sock, char* jobname, int num){
 int send_imgs_to_client(int sock, char* jobname){
     FILE *thisImage;
     int size, read_size;
+    char ACK[2];
 
     std::string ext = ".jpg";
     std::string filename = std::string(jobname) + "_result" + ext;
@@ -68,7 +70,7 @@ int send_imgs_to_client(int sock, char* jobname){
     // Get the size of the file
     fseek(thisImage, 0, SEEK_END);
     size = ftell(thisImage);
-    std::cout << size << std::endl;
+    std::cout <<"result size = "<< size << std::endl;
     fseek(thisImage, 0, SEEK_SET);
     
     // Copy the value to buff
@@ -83,7 +85,7 @@ int send_imgs_to_client(int sock, char* jobname){
     while (!feof(thisImage)) {
         // Read from the file
         read_size = fread(buffer, 1, sizeof(buffer), thisImage);
-        std::cout << read_size << "\n";
+        //std::cout << read_size << "\n";
         // Send data through the socket
         if (read_size > 0) {
             if (send(sock, buffer, read_size, 0) < 0) {
@@ -94,6 +96,12 @@ int send_imgs_to_client(int sock, char* jobname){
 
         // Empty the buffer
         bzero(buffer, sizeof(buffer));
+
+        // Wait to receive ACK
+        if ((recv(sock, ACK, sizeof(ACK), 0) <0)){
+            perror("Error Receiving ACK!\n");
+            exit(errno);
+        }
     }
     fclose(thisImage);
     return 0;
@@ -135,6 +143,10 @@ int main(int argc, char const *argv[])
         perror("accept failed!\n"); 
         exit(EXIT_FAILURE); 
     } 
+
+    // Start timing
+    struct timeval start, end;
+	gettimeofday(&start, NULL);
 
     // Job name
     printf("Reading job name\n");
@@ -178,6 +190,14 @@ int main(int argc, char const *argv[])
     }
 
     // After chatting close the socket 
-    close(server_fd); 
+    close(server_fd);
+
+    // finish timing
+    gettimeofday(&end, NULL);
+
+	long seconds = (end.tv_sec - start.tv_sec);
+	long micros = ((seconds * 1000000) + end.tv_usec) - (start.tv_usec);
+
+	printf("****************Time elpased is %ld micro second*****************\n", micros);
     return 0; 
 }

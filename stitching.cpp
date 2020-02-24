@@ -8,7 +8,8 @@
 // required to stitch images. 
 #include "opencv2/imgcodecs.hpp" 
 #include "opencv2/highgui.hpp" 
-#include "opencv2/stitching.hpp" 
+#include "opencv2/stitching.hpp"
+#include <sys/time.h>	// for gettimeofday() 
   
 using namespace cv;
   
@@ -20,6 +21,10 @@ Stitcher::Mode mode = Stitcher::PANORAMA;
 std::vector<Mat> imgs; 
 
 int stitch_imgs(char* filename, int num){
+
+    struct timeval start, end;
+	gettimeofday(&start, NULL);
+
     // Get all the images that need to be  
     // stitched as arguments from command line
     std::string imgname;
@@ -61,8 +66,16 @@ int stitch_imgs(char* filename, int num){
     imwrite(std::string(filename) + "_result" + ext, pano); 
       
     // Show the result 
-    imshow("Result", pano); 
-      
-    waitKey(0); 
+    //imshow("Result", pano); 
+    //waitKey(0);
+
+      // finish timing
+    gettimeofday(&end, NULL);
+
+	long seconds = (end.tv_sec - start.tv_sec);
+	long micros = ((seconds * 1000000) + end.tv_usec) - (start.tv_usec);
+
+	printf("****************Stitching time is %ld micro second*****************\n", micros);
+
     return 0;
 }
