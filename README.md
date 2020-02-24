@@ -14,13 +14,13 @@ If you are using Mac, plase check out [how to install opencv](https://medium.com
 To compile server program: 
 
 ~~~~
-g++ $(pkg-config --cflags --libs opencv4) -std=c++11  *servername.cpp* -o *servername*
+g++ $(pkg-config --cflags --libs opencv4) -std=c++11  'servername.cpp' -o 'servername'
 ~~~~
 
 To compile client program: 
 
 ~~~~
-g++ *clientname.cpp* -o *clientname*
+g++ 'clientname.cpp' -o 'clientname'
 ~~~~
 
 ### Modify IP address
