@@ -8,8 +8,9 @@
 #include <string.h>
 #include <netdb.h> 
 #include <errno.h>
+#include <sys/time.h>
 
-char* server_ip = "169.231.164.67";
+char* server_ip = "169.231.175.88";
 int port = 8222;
 std::string folder = "GrandCanyon";
 
@@ -106,7 +107,8 @@ void *clientThread(void* arg) {
 }
 
 int main(int argc, char** argv) {
-
+    timeval start, end;
+    gettimeofday(&start, NULL);
     struct sockaddr_in server_address;
     char buff[50];
     char read_buff[1024];
@@ -146,7 +148,7 @@ int main(int argc, char** argv) {
     // std::cin >> folderpath;
 
     // Input the number of files
-    int filenum = 2;
+    int filenum = 32;
     // std::cout << "Type the number of images: ";
     // std::cin >> filenum;
 
@@ -212,5 +214,10 @@ int main(int argc, char** argv) {
 
     // Close the socket
     close(sockfd);
+    gettimeofday(&end, NULL);
+
+    long seconds = (end.tv_sec - start.tv_sec);
+    long micro = ((seconds * 1000000) + end.tv_usec) - (start.tv_usec);
+    std::cout << "The program is done.\n The time used is " << seconds <<"s and " << micro << " microseconds.\n";
     return 0;
 }
