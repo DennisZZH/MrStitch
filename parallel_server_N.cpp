@@ -10,7 +10,7 @@
 
 #include <cstdlib>
 #include <iostream>
-#include "stitching.cpp"
+#include "stitching_parallel.cpp"
 #include <pthread.h>
 #include <sys/time.h>	// for gettimeofday()
 
