@@ -25,5 +25,5 @@ g++ clientname.cpp -o clientname
 
 ### Modify IP address
 
-Open the client program, change the variavle **server_ip** to your server IP address.
+Open the client program, change the variavle **server_ip** to your current server IP address.
 
