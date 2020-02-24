@@ -12,6 +12,7 @@
 #include <iostream>
 #include "stitching.cpp"
 #include <pthread.h>
+#include <sys/time.h>	// for gettimeofday()
 
 static char jobname[50];
 static  int num = 0;
@@ -26,7 +27,7 @@ int recv_imgs_from_client(int sock, int num){
         exit(errno);
     }
     siz = atoi(buf);
-   printf("size = %d", siz);
+   printf("size = %d\n", siz);
 
     char Rbuffer[1024];
     printf("Reading image byte array!\n");
@@ -46,7 +47,7 @@ int recv_imgs_from_client(int sock, int num){
         }
         fwrite(Rbuffer, sizeof(char), n, image);
         acc -= n;
-        printf("buffer size = %d\n", n); 
+        //printf("buffer size = %d\n", n); 
     }
 
     fclose(image);
@@ -88,7 +89,7 @@ int send_imgs_to_client(int sock){
     while (!feof(thisImage)) {
         // Read from the file
         read_size = fread(buffer, 1, sizeof(buffer), thisImage);
-        std::cout <<"result buffer size = "<<read_size << std::endl;
+        //std::cout <<"result buffer size = "<<read_size << std::endl;
         // Send data through the socket
         if (read_size > 0) {
             if (send(sock, buffer, read_size, 0) < 0) {
@@ -104,7 +105,7 @@ int send_imgs_to_client(int sock){
             perror("Fail to receive ACK!\n");
             exit(errno);
         }else{
-            printf("Receive ACK for result\n");
+            //printf("Receive ACK for result\n");
         }
     }
     printf("send size = %d\n", acc);
@@ -192,6 +193,10 @@ int main(int argc, char const *argv[])
         exit(EXIT_FAILURE); 
     } 
 
+    // Start timing
+    struct timeval start, end;
+	gettimeofday(&start, NULL);
+
     // Job name
     printf("Reading job name!\n");
     if ((recv(main_socket, jobname, sizeof(jobname), 0) <0)){
@@ -243,7 +248,17 @@ int main(int argc, char const *argv[])
         perror("Error Receiving ACK!\n");
         exit(errno);
     }
-    // After chatting close the socket 
+
+     // After chatting close the socket 
     close(server_fd); 
+
+    // Finish timing
+    gettimeofday(&end, NULL);
+
+	long seconds = (end.tv_sec - start.tv_sec);
+	long micros = ((seconds * 1000000) + end.tv_usec) - (start.tv_usec);
+
+	printf("****************Time elpased is %ld micro second*****************\n", micros);
+
     return 0; 
 }
