@@ -27,3 +27,7 @@ g++ clientname.cpp -o clientname
 
 Open the client program, change the variavle **server_ip** to your current server IP address.
 
+### Example images
+
+Please use the **GrandCanyon** images folder that we provide in the directory for testing. The program does not work if using other image folder due to some hard coded syntax in the program. Adaptive client program under construction. 
+
