@@ -11,25 +11,13 @@ If you are using Mac, plase check out [how to install opencv](https://medium.com
 
 ### Compile client and server
 
-To compile sequantial server: 
+To compile server program: 
 
 ~~~~
-g++ $(pkg-config --cflags --libs opencv4) -std=c++11  sequantial_server.cpp -o sequantial_server
+g++ $(pkg-config --cflags --libs opencv4) -std=c++11  servername.cpp -o servername
 ~~~~
 
-To compile parallel server with N threads:
-
-~~~~
-g++ $(pkg-config --cflags --libs opencv4) -std=c++11 parallel_server_N.cpp -o parallel_server_N
-~~~~
-
-To compile parallel server with K threads:
-
-~~~~
-g++ $(pkg-config --cflags --libs opencv4) -std=c++11 parallel_server_K.cpp -o parallel_server_K
-~~~~
-
-To compile the clients: 
+To compile client program: 
 
 ~~~~
 g++ clientname.cpp -o clientname
