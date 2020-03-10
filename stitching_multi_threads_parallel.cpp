@@ -20,7 +20,7 @@ Stitcher::Mode mode = Stitcher::PANORAMA;
 // Array for pictures 
 std::vector<Mat> imgs; 
 
-int stitch_imgs(int num, char* jobname){
+int stitch_imgs(int client_num, int num, char* jobname){
 
     struct timeval start, end;
 	gettimeofday(&start, NULL);
@@ -75,7 +75,7 @@ int stitch_imgs(int num, char* jobname){
 	long seconds = (end.tv_sec - start.tv_sec);
 	long micros = ((seconds * 1000000) + end.tv_usec) - (start.tv_usec);
 
-	printf("****************Stitching time is %ld micro second*****************\n", micros);
+	printf("****************Client%d Stitching time is %ld micro second*****************\n", client_num, micros);
 
     return 0;
 }

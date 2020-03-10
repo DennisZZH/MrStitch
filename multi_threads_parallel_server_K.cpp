@@ -6,20 +6,22 @@
 #include <stdlib.h> 
 #include <netinet/in.h> 
 #include <string.h> 
-#define PORT 8222
-
+#define PORT 8200
+#define NUM_MULTI_THREAD 3
 #include <cstdlib>
 #include <iostream>
-#include "stitching_parallel.cpp"
+#include "stitching_multi_threads_parallel.cpp"
 #include <pthread.h>
 #include <sys/time.h>	// for gettimeofday()
 
 static char jobname[50];
-static  int num = 0;
+static int nums[4];
 
 int recv_imgs_from_client(int sock, int num){
-
+    
     printf("Reading image size!\n");
+    printf("Receiving image%d!\n", num);
+   
     int siz = 0;
     char buf[50];
     if ((recv(sock, buf, sizeof(buf), 0) <0)){
@@ -30,8 +32,6 @@ int recv_imgs_from_client(int sock, int num){
    printf("size = %d\n", siz);
 
     char Rbuffer[1024];
-    printf("Reading image byte array!\n");
-    printf("Converting byte array to image!\n");
     int n = 0;
     int acc = siz;
 
@@ -40,7 +40,10 @@ int recv_imgs_from_client(int sock, int num){
     std::string imgname = std::string(jobname) + std::to_string(num) + ext;
     image = std::fopen(imgname.c_str(), "wb");
 
+    printf("Reading image byte array!\n");
+    printf("Converting byte array to image!\n");
     while(acc > 0){
+       
         if ((n = recv(sock, Rbuffer, 1024, 0)) < 0){
             perror("recv_size()");
             exit(errno);
@@ -51,7 +54,7 @@ int recv_imgs_from_client(int sock, int num){
     }
 
     fclose(image);
-    printf("done\n");
+    //printf("Done!\n");
 
     return 0;
 }
@@ -108,20 +111,40 @@ int send_imgs_to_client(int sock){
             //printf("Receive ACK for result\n");
         }
     }
-    printf("send size = %d\n", acc);
+    //printf("send size = %d\n", acc);
     fclose(thisImage);
     return 0;
 }
 
-void *socket_thread_func(void *num){
-    int seq = *((int*)num);
+void *socket_thread_func(void *args){
+    std::string strbuf = *((std::string*) args);
+    char* charbuf = strdup(strbuf.c_str());
+    int para[4];
     int thread_fd, thread_socket; 
     struct sockaddr_in address; 
     int addrlen = sizeof(address);
     char ACK[2] = "1"; 
-    int portnum = PORT + seq + 1;
+
+    // get args
+    int acc = 0;
+    char * pch;
+    pch = strtok (charbuf, ";");
+    while (pch != NULL){
+        para[acc] = atoi(pch);
+        acc++;
+        pch = strtok (NULL, ";");
+    }
+
+    // printf("This is client %d\n", para[0]);
+    // printf("This is thread %d!\n", para[1]);
+    // for(int i = 0; i < 3; i++){
+    //     printf("client%d thread%d args = %d ", para[0], para[1], para[i]);
+    // }
+    // printf("\n");
+
+    int portnum = PORT + para[0] * 4 + para[1] + 1;
     // Creating socket file descriptor 
-    printf("thread%d portnum = %d\n", seq, portnum);
+    //printf("thread%d portnum = %d\n", para[1], portnum);
     if ((thread_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) 
     { 
         perror("socket failed!\n"); 
@@ -147,21 +170,32 @@ void *socket_thread_func(void *num){
         exit(EXIT_FAILURE); 
     }
     // Receive image
-    recv_imgs_from_client(thread_socket, seq);
-    // Send ACK 
-    if(send(thread_socket, ACK, sizeof(ACK), 0) < 0){
-        std::cout << "Failed to send the ACK!\n";
-        exit(errno);
+    for(int i = para[2]; i < para[2] + para[3]; i++){
+        recv_imgs_from_client(thread_socket, i);
+        // Send ACK 
+        if(send(thread_socket, ACK, sizeof(ACK), 0) < 0){
+            std::cout << "Failed to send the ACK!\n";
+            exit(errno);
+        }
     }
+    // // Send ACK 
+    // if(send(thread_socket, ACK, sizeof(ACK), 0) < 0){
+    //     std::cout << "Failed to send the ACK!\n";
+    //     exit(errno);
+    // }
+
     // After chatting close the socket 
     close(thread_fd);
     return NULL;
 }
 
-int main(int argc, char const *argv[]) 
+
+void* server_setup(void* args) 
 { 
-  int server_fd, main_socket; 
-    struct sockaddr_in address;  
+    int client_num = *((int*)args);
+    int portnum = PORT + client_num * 4;
+    int server_fd, main_socket; 
+    struct sockaddr_in address; 
     int addrlen = sizeof(address);
     char ACK[2] = "1"; 
        
@@ -174,7 +208,7 @@ int main(int argc, char const *argv[])
        
     address.sin_family = AF_INET; 
     address.sin_addr.s_addr = INADDR_ANY; 
-    address.sin_port = htons( PORT ); 
+    address.sin_port = htons( portnum ); 
        
     if(bind(server_fd, (struct sockaddr *)&address, sizeof(address)) != 0){
         perror("bind failed!\n"); 
@@ -203,25 +237,36 @@ int main(int argc, char const *argv[])
         perror("Error reading job name!\n");
         exit(errno);
     }
-    printf("jobname = %s\n", jobname);
+    //printf("jobname = %s\n", jobname);
 
-    // How many numbers of imgs to stitch
+    // Receive start num of each thread
     printf("Reading image number!\n");
     char buf[50];
     if ((recv(main_socket, buf, sizeof(buf), 0) <0)){
         perror("Error reading image num!\n");
         exit(errno);
     }
-    num = atoi(buf);
-    printf("img num = %d\n",num);
-
+    
+    char * pch;
+    int acc = 0;
+    pch = strtok (buf,";");
+    while (pch != NULL){
+        nums[acc] = atoi(pch);
+        acc++;
+        pch = strtok (NULL, ";");
+    }
+//    for(int i = 0; i < 4; i++){
+//        printf("image start num%d = %d\n", i, nums[i]);
+//    }
   
     // Function for receiving image data from client
-    pthread_t thread_ids[num];
-    int seq[num];
-    for(int i = 0; i < num; i++){
-        seq[i] = i;
-        if(pthread_create((thread_ids + i), NULL, socket_thread_func, (void*) (seq+i)) < 0){
+    pthread_t thread_ids[3];
+    std::string socket_args[3];
+    for(int i = 0; i < 3; i++){
+        // args = client num, socket num, start img num, img count
+        socket_args[i] = std::to_string(client_num) + ";" + std::to_string(i) + ";" + std::to_string(nums[i]) + ";" + std::to_string(nums[i+1] - nums[i]);
+        //std::cout<<"main socket_args"<<i<<" = "<<socket_args[i]<<std::endl;
+        if(pthread_create(&(thread_ids[i]), NULL, socket_thread_func, (void*) &(socket_args[i])) < 0){
             perror("could not create thread");
             exit(errno);
         }
@@ -232,24 +277,23 @@ int main(int argc, char const *argv[])
         }
     }
 
-    for(int i = 0; i < num; i++){
+    for(int i = 0; i < 3; i++){
         pthread_join(thread_ids[i], NULL);
     }
 
-    stitch_imgs(num, jobname);
+    stitch_imgs(client_num, nums[3], jobname);
     std::cout<<"finish stitching!"<<std::endl;
 
     send_imgs_to_client(main_socket);
     std::cout<<"finish sending back result!"<<std::endl;
 
     // Wait to receive ACK
-    std::cout<<"waiting ACK of result!"<<std::endl;
+    //std::cout<<"waiting ACK of result!"<<std::endl;
     if ((recv(main_socket, ACK, sizeof(ACK), 0) <0)){
         perror("Error Receiving ACK!\n");
         exit(errno);
     }
-
-     // After chatting close the socket 
+    // After chatting close the socket 
     close(server_fd); 
 
     // Finish timing
@@ -258,7 +302,23 @@ int main(int argc, char const *argv[])
 	long seconds = (end.tv_sec - start.tv_sec);
 	long micros = ((seconds * 1000000) + end.tv_usec) - (start.tv_usec);
 
-	printf("****************Time elpased is %ld micro second*****************\n", micros);
+	printf("****************Client%d time elpased is %ld micro second*****************\n", client_num, micros);
 
-    return 0; 
+    return NULL;
+
+}
+
+
+
+int main(){
+    pthread_t tids[3];
+    int clients_num[3];
+    for(int i = 0; i < NUM_MULTI_THREAD; i++){
+        clients_num[i] = i;
+        pthread_create(&(tids[i]), NULL, server_setup, &(clients_num[i]));
+    }
+    for(int i = 0; i < NUM_MULTI_THREAD; i++){
+        pthread_join(tids[i], NULL);
+    }
+    return 0;
 }
