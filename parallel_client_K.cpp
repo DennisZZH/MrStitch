@@ -10,9 +10,7 @@
 #include <errno.h>
 #include <sys/time.h>
 
-char* server_ip = "169.231.175.88";
-int port = 8222;
-std::string folder = "GrandCanyon";
+char* server_ip = "192.168.1.10";
 bool divide = true;
 
 struct triple
@@ -20,15 +18,18 @@ struct triple
     int startNum;
     int num;
     int numOfThread;
+    int port;
+    int firstFile;
+    std::string folder;
 };
 
 
-void sendImage(int sockfd, std::string folder, int i) {
+void sendImage(int sockfd, std::string folder, int startnum, int i) {
     FILE *thisImage;
     int size, read_size;
 
     // Assemble the file path of the file
-    int numofimg = 42 + i;
+    int numofimg = startnum + i;
     std::string filepath = folder + "/PIC_00" + std::to_string(numofimg) + ".JPG";
 
     // Copy the path to a c_string
@@ -92,8 +93,8 @@ void *clientThread(void* arg) {
     // Assign IP and port #
     server_address.sin_family = AF_INET;
     server_address.sin_addr.s_addr = inet_addr(server_ip);
-    server_address.sin_port = htons(port + args.numOfThread + 1);
-    std::cout << args.numOfThread << ") Port #: " << port + args.numOfThread + 1 << "\n";
+    server_address.sin_port = htons(args.port + args.numOfThread + 1);
+    std::cout << args.numOfThread << ") Port #: " << args.port + args.numOfThread + 1 << "\n";
 
     if (connect(sockfd, (struct sockaddr*)&server_address, sizeof(server_address)) != 0) {
         printf("Error number: %d\n", errno);
@@ -106,7 +107,7 @@ void *clientThread(void* arg) {
     // Send the picture
     for (int j = args.startNum; j < args.num + args.startNum; j++) {
         std::cout << args.numOfThread << ") Sending the " << j << " image\n";
-        sendImage(sockfd, folder, j);
+        sendImage(sockfd, args.folder, args.firstFile,j);
 
         // Check the ack
         if (recv(sockfd, ack, sizeof(ack), 0)) {
@@ -134,7 +135,11 @@ int main(int argc, char** argv) {
         exit(0);
     }
 
+    int port;
     std::cout << "You are connecting to " << server_ip << std::endl;
+    std::cout << "Type the port number: ";
+    std::cin >> port;
+    std::cout << "\n";
 
     // Assign IP and port #
     server_address.sin_family = AF_INET;
@@ -149,21 +154,29 @@ int main(int argc, char** argv) {
     }
 
     // Declare and send the job name
-    std::string jobname = "GrandCanyon";
-    // std::cout << "Type a name for this job: ";
-    // std::cin >> jobname;
+    std::string jobname = "";
+    std::cout << "Type a name for this job: ";
+    std::cin >> jobname;
+    std::cout << "\n";
+
     strcpy(buff, jobname.c_str());
     send(sockfd, buff, sizeof(buff), 0);
     
     // Select a folder
-    // std::string folderpath = "GrandCanyon";
-    // std::cout << "Type the path to the folder: ";
-    // std::cin >> folderpath;
+    std::string folderpath = "";
+    std::cout << "Type the path to the folder: ";
+    std::cin >> folderpath;
+    std::cout << "\n";
+
+    int firstFile;
+    std::cout << "Type the sequence number of the first file: ";
+    std::cin >> firstFile;
+    std::cout << "\n";
 
     // Input the number of files
-    int filenum = 32;
-    // std::cout << "Type the number of images: ";
-    // std::cin >> filenum;
+    int filenum;
+    std::cout << "Type the number of images: ";
+    std::cin >> filenum;
     
     // Assign the number of files for each thread
     int numOfImages = filenum / 3;
@@ -200,6 +213,9 @@ int main(int argc, char** argv) {
         else {
             args[i].startNum = args[i-1].startNum + args[i-1].num;
         }
+        args[i].port = port;
+        args[i].folder = folderpath;
+        args[i].firstFile = firstFile;
     }
 
     // Send the photos
